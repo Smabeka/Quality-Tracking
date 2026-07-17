@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quality Tracking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f7f6; --paper:#fff; --line:#e1e8e5; --ink:#16231f; --muted:#7c8f89;
+    --green:#0a7d5e; --greenBg:#e5f5ee; --greenBorder:#b8ddcb;
+    --red:#c23b2e; --redBg:#fdecea; --redBorder:#f1c9c2;
+    --amber:#a06c0b; --amberBg:#fdf3e0; --amberBorder:#f0dcae;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter Tight',sans-serif;}
+  .mono{font-family:'Space Mono',monospace;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px;}
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(244,247,246,.95);backdrop-filter:blur(6px);z-index:10;}
+  .headrow{display:flex;align-items:center;justify-content:space-between;padding:16px 0;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .logo{width:32px;height:32px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;}
+  .brand h1{font-size:14px;margin:0;font-weight:700;}
+  .brand p{font-size:10px;color:var(--muted);margin:0;}
+  nav{display:flex;gap:4px;}
+  nav button{background:none;border:none;border-bottom:2px solid transparent;padding:10px 14px;font-size:14px;color:var(--muted);cursor:pointer;font-family:inherit;}
+  nav button.active{color:var(--green);border-color:var(--green);}
+  main{padding:24px 0 60px;}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;}
+  .p4{padding:16px;}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
+  @media(min-width:700px){.stats{grid-template-columns:repeat(3,1fr);}}
+  .stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px;}
+  .stat-value{font-size:24px;font-weight:700;font-family:'Space Mono',monospace;}
+  input,select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14px;color:var(--ink);font-family:inherit;width:100%;}
+  input:focus,select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(10,125,94,.12);}
+  label.field{display:flex;flex-direction:column;gap:4px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-size:14px;cursor:pointer;border:none;font-family:inherit;}
+  .btn-primary{background:var(--green);color:#fff;font-weight:500;}
+  .btn-primary:hover{background:#086749;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:#3d4f49;}
+  .btn-ghost:hover{background:#eef3f1;}
+  .btn-danger{background:transparent;border:1px solid var(--redBorder);color:var(--red);}
+  .btn-danger:hover{background:var(--redBg);}
+  .tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:999px;border:1px solid;font-size:10px;font-weight:600;}
+  .tag-neutral{background:#eef3f1;color:#3d4f49;border-color:var(--line);}
+  .tag-green{background:var(--greenBg);color:var(--green);border-color:var(--greenBorder);}
+  .tag-red{background:var(--redBg);color:var(--red);border-color:var(--redBorder);}
+  .grid2{display:grid;grid-template-columns:1fr;gap:12px;}
+  @media(min-width:640px){.grid2{grid-template-columns:1fr 1fr;}}
+  .grid3{display:grid;grid-template-columns:1fr;gap:12px;}
+  @media(min-width:640px){.grid3{grid-template-columns:1fr 1fr 1fr;}}
+  .metric-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px;cursor:pointer;text-align:left;width:100%;font-family:inherit;color:inherit;}
+  .metric-card:hover{border-color:var(--greenBorder);}
+  .row-btn{width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px;background:none;border:1px solid var(--line);border-radius:10px;cursor:pointer;text-align:left;font-family:inherit;color:inherit;margin-bottom:8px;}
+  .row-btn:hover{border-color:var(--greenBorder);}
+  .muted-italic{color:var(--muted);font-style:italic;font-size:13px;}
+  .x-btn{background:none;border:none;color:#a3b3ad;cursor:pointer;padding:2px;}
+  .x-btn:hover{color:var(--red);}
+  .saved-flash{font-size:10px;color:var(--green);}
+  .back-link{background:none;border:none;color:var(--green);cursor:pointer;font-size:14px;font-family:inherit;padding:0;margin-bottom:8px;}
+  .back-link:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const STORE_KEY = "quality-tracking-standalone-v1";
+function loadStore(){ try{ const r = localStorage.getItem(STORE_KEY); return r? JSON.parse(r): null; }catch(e){ return null; } }
+function saveStore(d){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }catch(e){ console.error(e); } }
+const uid = () => Math.random().toString(36).slice(2,9);
+const today = () => new Date().toISOString().slice(0,10);
+const CATEGORIES = ["Process","Product","Customer","Food Safety"];
+const HIGHER="up", LOWER="down";
+
+function seedData(){
+  return { metrics: [
+    { id:uid(), name:"NCR Closure Rate", unit:"%", category:"Process", target:90, direction:HIGHER,
+      points:[{id:uid(),date:"2026-06-15",value:78},{id:uid(),date:"2026-06-22",value:82},{id:uid(),date:"2026-06-29",value:85},{id:uid(),date:"2026-07-06",value:91}] },
+    { id:uid(), name:"Customer Complaint Rate", unit:"per 10k units", category:"Customer", target:2, direction:LOWER,
+      points:[{id:uid(),date:"2026-06-15",value:3.4},{id:uid(),date:"2026-06-22",value:3.1},{id:uid(),date:"2026-06-29",value:2.6},{id:uid(),date:"2026-07-06",value:2.2}] },
+    { id:uid(), name:"CCP Deviation Count", unit:"deviations/wk", category:"Food Safety", target:0, direction:LOWER,
+      points:[{id:uid(),date:"2026-06-15",value:2},{id:uid(),date:"2026-06-22",value:1},{id:uid(),date:"2026-06-29",value:0},{id:uid(),date:"2026-07-06",value:1}] }
+  ]};
+}
+
+let state = loadStore() || seedData();
+let tab = "dashboard";
+let openMetricId = null;
+let showNew = false;
+let savedFlashTimer = null;
+
+function persist(){
+  saveStore(state);
+  const el = document.getElementById("saved-flash");
+  if(el){ el.style.opacity="1"; clearTimeout(savedFlashTimer); savedFlashTimer=setTimeout(()=>{ if(el) el.style.opacity="0"; },900); }
+}
+function esc(str){ const d=document.createElement("div"); d.textContent=str==null?"":str; return d.innerHTML; }
+
+function metricStatus(m){
+  const last = m.points[m.points.length-1];
+  if(!last) return "neutral";
+  const onTarget = m.direction===HIGHER ? last.value>=m.target : last.value<=m.target;
+  return onTarget ? "green":"red";
+}
+function trendOf(m){
+  const p = m.points;
+  if(p.length<2) return null;
+  const delta = p[p.length-1].value - p[p.length-2].value;
+  const good = m.direction===HIGHER ? delta>=0 : delta<=0;
+  return {delta, good};
+}
+function sparklinePath(points, w, h){
+  if(points.length<2) return "";
+  const vals = points.map(p=>p.value);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max-min || 1;
+  return points.map((p,i)=>{
+    const x = (i/(points.length-1))*w;
+    const y = h - ((p.value-min)/range)*h;
+    return (i===0?"M":"L")+x+","+y;
+  }).join(" ");
+}
+
+function render(){
+  const root = document.getElementById("app");
+  root.innerHTML = `
+    <header>
+      <div class="wrap headrow">
+        <div class="brand">
+          <div class="logo">◈</div>
+          <div><h1>QUALITY TRACKING</h1><p>KPI trends against target</p></div>
+        </div>
+        <span class="saved-flash" id="saved-flash" style="opacity:0;transition:opacity .3s;">● saved</span>
+      </div>
+      <div class="wrap" style="display:flex;gap:4px;">
+        ${navBtn("dashboard","Dashboard")}
+        ${navBtn("metrics","Metrics")}
+      </div>
+    </header>
+    <main class="wrap">
+      ${tab==="dashboard" ? renderDashboard() : renderMetrics()}
+    </main>
+  `;
+  attachHandlers();
+}
+function navBtn(key,label){ return `<button data-nav="${key}" class="${tab===key?'active':''}">${label}</button>`; }
+
+function renderDashboard(){
+  const metrics = state.metrics;
+  const onTrack = metrics.filter(m=>metricStatus(m)==="green").length;
+  return `
+    <div class="stats">
+      <div class="card p4"><div class="stat-label">Metrics Tracked</div><div class="stat-value">${metrics.length}</div></div>
+      <div class="card p4"><div class="stat-label">On Target</div><div class="stat-value" style="color:var(--green);">${onTrack}</div></div>
+      <div class="card p4"><div class="stat-label">Off Target</div><div class="stat-value" style="color:var(--red);">${metrics.length-onTrack}</div></div>
+    </div>
+    <div class="grid2">
+      ${metrics.map(m=>{
+        const last = m.points[m.points.length-1];
+        const trend = trendOf(m);
+        const status = metricStatus(m);
+        const color = status==="green" ? "#0a7d5e" : "#c23b2e";
+        const path = sparklinePath(m.points, 100, 32);
+        return `<button class="metric-card" data-open-metric="${m.id}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">${m.category}</span>
+            <span class="tag tag-${status}">${status==='green'?'on target':'off target'}</span>
+          </div>
+          <p style="font-size:14px;font-weight:500;margin:0 0 6px;">${esc(m.name)}</p>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+            <div>
+              <p class="mono" style="font-size:22px;margin:0;">${last?last.value:'—'}<span style="font-size:11px;color:var(--muted);margin-left:4px;font-family:inherit;">${esc(m.unit)}</span></p>
+              <p style="font-size:11px;color:var(--muted);margin:2px 0 0;">🎯 target ${m.target} ${esc(m.unit)}</p>
+            </div>
+            <div style="width:80px;">
+              <svg viewBox="0 0 100 32" style="width:100%;height:40px;"><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ${trend ? `<p style="font-size:11px;text-align:right;margin:0;color:${trend.good?'var(--green)':'var(--red)'};">${trend.delta>0?'+':''}${trend.delta.toFixed(1)}</p>`:''}
+            </div>
+          </div>
+        </button>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderMetrics(){
+  if(openMetricId){
+    const m = state.metrics.find(x=>x.id===openMetricId);
+    if(m) return renderMetricDetail(m);
+    openMetricId = null;
+  }
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2 style="font-size:18px;margin:0;font-weight:700;">Quality Metrics</h2>
+      <button class="btn btn-primary" data-action="toggle-new">+ New Metric</button>
+    </div>
+    ${showNew ? `
+      <div class="card p4 grid2" style="margin-bottom:16px;">
+        <label class="field">Metric Name<input id="nm-name" /></label>
+        <label class="field">Unit<input id="nm-unit" placeholder="%" /></label>
+        <label class="field">Category<select id="nm-category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></label>
+        <label class="field">Target Value<input type="number" id="nm-target" /></label>
+        <label class="field" style="grid-column:1/-1;">Direction<select id="nm-direction"><option value="${HIGHER}">Higher is better</option><option value="${LOWER}">Lower is better</option></select></label>
+        <div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;">
+          <button class="btn btn-ghost" data-action="cancel-new">Cancel</button>
+          <button class="btn btn-primary" data-action="create-metric">Create</button>
+        </div>
+      </div>` : ``}
+    <div>
+      ${state.metrics.map(m=>{
+        const status = metricStatus(m);
+        const last = m.points[m.points.length-1];
+        return `<button class="row-btn" data-open-metric="${m.id}">
+          <div>
+            <div style="font-size:14px;">${esc(m.name)}</div>
+            <div style="font-size:11px;color:var(--muted);">${m.category} · target ${m.target} ${esc(m.unit)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="mono" style="font-size:13px;">${last?last.value+' '+esc(m.unit):'no data'}</span>
+            <span class="tag tag-${status}">${status==='green'?'on target':'off target'}</span>
+          </div>
+        </button>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderMetricDetail(m){
+  const status = metricStatus(m);
+  const last = m.points[m.points.length-1];
+  const w=700,h=220,pad=30;
+  const vals = m.points.map(p=>p.value).concat([m.target]);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (max-min)||1;
+  const yOf = v => pad + (h-2*pad) - ((v-min)/range)*(h-2*pad);
+  const xOf = i => m.points.length>1 ? pad + (i/(m.points.length-1))*(w-2*pad) : w/2;
+  const linePath = m.points.map((p,i)=>(i===0?"M":"L")+xOf(i)+","+yOf(p.value)).join(" ");
+  const targetY = yOf(m.target);
+
+  return `
+    <button class="back-link" data-action="back-to-metrics">← All metrics</button>
+    <div class="card p4 grid2" style="margin-bottom:12px;">
+      <label class="field">Metric Name<input data-metric-field="${m.id}:name" value="${esc(m.name)}" /></label>
+      <label class="field">Category<select data-metric-field="${m.id}:category">${CATEGORIES.map(c=>`<option ${c===m.category?'selected':''}>${c}</option>`).join('')}</select></label>
+      <label class="field">Unit<input data-metric-field="${m.id}:unit" value="${esc(m.unit)}" /></label>
+      <label class="field">Target Value<input type="number" data-metric-field="${m.id}:target" value="${m.target}" /></label>
+      <label class="field" style="grid-column:1/-1;">Direction<select data-metric-field="${m.id}:direction"><option value="${HIGHER}" ${m.direction===HIGHER?'selected':''}>Higher is better</option><option value="${LOWER}" ${m.direction===LOWER?'selected':''}>Lower is better</option></select></label>
+      <div style="grid-column:1/-1;display:flex;justify-content:flex-end;">
+        <button class="btn btn-danger" data-action="delete-metric" data-metric="${m.id}">🗑 Delete Metric</button>
+      </div>
+    </div>
+    <div class="card p4" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="mono" style="font-size:22px;">${last?last.value:'—'}</span>
+          <span class="tag tag-${status}">${status==='green'?'on target':'off target'}</span>
+        </div>
+        <span style="font-size:12px;color:var(--muted);">target: ${m.target} ${esc(m.unit)}</span>
+      </div>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:220px;">
+        <line x1="${pad}" y1="${targetY}" x2="${w-pad}" y2="${targetY}" stroke="#0a7d5e" stroke-width="1.5" stroke-dasharray="5,4" />
+        <text x="${w-pad}" y="${targetY-6}" text-anchor="end" font-size="11" fill="#0a7d5e">target</text>
+        <path d="${linePath}" fill="none" stroke="#c23b2e" stroke-width="2.5" />
+        ${m.points.map((p,i)=>`<circle cx="${xOf(i)}" cy="${yOf(p.value)}" r="3.5" fill="#c23b2e" />`).join('')}
+        ${m.points.map((p,i)=>`<text x="${xOf(i)}" y="${h-8}" text-anchor="middle" font-size="10" fill="#7c8f89">${p.date.slice(5)}</text>`).join('')}
+      </svg>
+    </div>
+    <div class="card p4">
+      <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px;">Data Points</p>
+      <div class="grid3" style="margin-bottom:10px;">
+        <label class="field">Date<input type="date" id="np-date" value="${today()}" /></label>
+        <label class="field">Value<input type="number" id="np-value" /></label>
+        <button class="btn btn-primary" style="align-self:end;justify-content:center;" data-action="add-point" data-metric="${m.id}">+ Add</button>
+      </div>
+      <div>
+        ${[...m.points].reverse().map(p=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;background:var(--bg);border-radius:6px;padding:8px 10px;margin-bottom:4px;">
+            <span>${p.date} — ${p.value} ${esc(m.unit)}</span>
+            <button class="x-btn" data-action="remove-point" data-metric="${m.id}" data-point="${p.id}">✕</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function attachHandlers(){
+  document.querySelectorAll('[data-nav]').forEach(el=>el.onclick=()=>{ tab=el.dataset.nav; if(tab==="dashboard") openMetricId=null; render(); });
+  document.querySelectorAll('[data-open-metric]').forEach(el=>el.onclick=()=>{ openMetricId = el.dataset.openMetric; tab="metrics"; render(); });
+  const backLink = document.querySelector('[data-action="back-to-metrics"]'); if(backLink) backLink.onclick=()=>{ openMetricId=null; render(); };
+
+  const toggleNew = document.querySelector('[data-action="toggle-new"]'); if(toggleNew) toggleNew.onclick=()=>{ showNew=!showNew; render(); };
+  const cancelNew = document.querySelector('[data-action="cancel-new"]'); if(cancelNew) cancelNew.onclick=()=>{ showNew=false; render(); };
+  const createMetric = document.querySelector('[data-action="create-metric"]');
+  if(createMetric) createMetric.onclick=()=>{
+    const name = document.getElementById('nm-name').value.trim();
+    if(!name) return;
+    const m = {
+      id: uid(), name, unit: document.getElementById('nm-unit').value,
+      category: document.getElementById('nm-category').value,
+      target: Number(document.getElementById('nm-target').value)||0,
+      direction: document.getElementById('nm-direction').value,
+      points: []
+    };
+    state.metrics.unshift(m); openMetricId = m.id; showNew=false; persist(); render();
+  };
+
+  document.querySelectorAll('[data-metric-field]').forEach(el=>el.onchange=()=>{
+    const [id,field] = el.dataset.metricField.split(':');
+    const m = state.metrics.find(x=>x.id===id);
+    m[field] = field==="target" ? Number(el.value) : el.value;
+    persist(); render();
+  });
+
+  document.querySelectorAll('[data-action="delete-metric"]').forEach(el=>el.onclick=()=>{
+    state.metrics = state.metrics.filter(m=>m.id!==el.dataset.metric);
+    openMetricId = null; persist(); render();
+  });
+
+  document.querySelectorAll('[data-action="add-point"]').forEach(el=>el.onclick=()=>{
+    const val = document.getElementById('np-value').value;
+    if(val==="") return;
+    const m = state.metrics.find(x=>x.id===el.dataset.metric);
+    m.points.push({id:uid(), date: document.getElementById('np-date').value, value: Number(val)});
+    m.points.sort((a,b)=>a.date.localeCompare(b.date));
+    persist(); render();
+  });
+
+  document.querySelectorAll('[data-action="remove-point"]').forEach(el=>el.onclick=()=>{
+    const m = state.metrics.find(x=>x.id===el.dataset.metric);
+    m.points = m.points.filter(p=>p.id!==el.dataset.point);
+    persist(); render();
+  });
+}
+
+render();
+</script>
+</body>
+</html>
