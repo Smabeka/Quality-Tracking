@@ -67,10 +67,28 @@
   .saved-flash{font-size:10px;color:var(--green);}
   .back-link{background:none;border:none;color:var(--green);cursor:pointer;font-size:14px;font-family:inherit;padding:0;margin-bottom:8px;}
   .back-link:hover{text-decoration:underline;}
+
+  #print-report{display:none;}
+  @media print{
+    body{background:#fff;}
+    header, .no-print{display:none !important;}
+    #app > *:not(#print-report){display:none !important;}
+    #print-report{display:block !important;}
+    #print-report table{width:100%;border-collapse:collapse;font-size:12px;}
+    #print-report th,#print-report td{border:1px solid #ccc;padding:6px 8px;text-align:left;}
+    #print-report th{background:#eef3f1;}
+    #print-report h1{font-size:20px;margin:0 0 2px;}
+    #print-report .meta{font-size:12px;color:#555;margin-bottom:16px;}
+    #print-report .cat-heading{font-size:13px;font-weight:700;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;}
+    #print-report .summary{display:flex;gap:24px;margin-bottom:16px;font-size:13px;}
+    #print-report .status-on{color:#0a7d5e;font-weight:600;}
+    #print-report .status-off{color:#c23b2e;font-weight:600;}
+  }
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="print-report"></div>
 
 <script>
 const STORE_KEY = "quality-tracking-standalone-v4";
@@ -163,7 +181,10 @@ function render(){
           <div class="logo">◈</div>
           <div><h1>QUALITY TRACKING</h1><p>KPI trends against target</p></div>
         </div>
-        <span class="saved-flash" id="saved-flash" style="opacity:0;transition:opacity .3s;">● saved</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="btn btn-ghost no-print" data-action="export-report" style="font-size:12px;padding:6px 10px;">📄 Export Report</button>
+          <span class="saved-flash" id="saved-flash" style="opacity:0;transition:opacity .3s;">● saved</span>
+        </div>
       </div>
       <div class="wrap" style="display:flex;gap:4px;">
         ${navBtn("dashboard","Dashboard")}
@@ -317,7 +338,47 @@ function renderMetricDetail(m){
   `;
 }
 
+function buildPrintReport(){
+  const metrics = state.metrics;
+  const onTrack = metrics.filter(m=>metricStatus(m)==="green").length;
+  const byCategory = {};
+  metrics.forEach(m=>{ (byCategory[m.category] = byCategory[m.category]||[]).push(m); });
+  const generated = new Date().toLocaleString();
+
+  const rows = Object.keys(byCategory).map(cat=>{
+    const items = byCategory[cat].map(m=>{
+      const last = m.points[m.points.length-1];
+      const status = metricStatus(m);
+      const trend = trendOf(m);
+      return `<tr>
+        <td>${esc(m.name)}${m.critical?' ⚠':''}</td>
+        <td>${last?last.value:'—'} ${esc(m.unit)}</td>
+        <td>${m.target} ${esc(m.unit)}</td>
+        <td class="${status==='green'?'status-on':'status-off'}">${status==='green'?'On Target':'Off Target'}</td>
+        <td>${trend? (trend.delta>0?'+':'')+trend.delta.toFixed(1) : '—'}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="cat-heading">${esc(cat)}</div>
+      <table><thead><tr><th>Metric</th><th>Current</th><th>Target</th><th>Status</th><th>Trend</th></tr></thead>
+      <tbody>${items}</tbody></table>`;
+  }).join('');
+
+  document.getElementById('print-report').innerHTML = `
+    <h1>Quality Tracking Report</h1>
+    <div class="meta">Generated ${generated}</div>
+    <div class="summary">
+      <div><strong>${metrics.length}</strong> metrics tracked</div>
+      <div><strong>${onTrack}</strong> on target</div>
+      <div><strong>${metrics.length-onTrack}</strong> off target</div>
+    </div>
+    ${rows}
+  `;
+}
+
 function attachHandlers(){
+  const exportBtn = document.querySelector('[data-action="export-report"]');
+  if(exportBtn) exportBtn.onclick=()=>{ buildPrintReport(); window.print(); };
+
   document.querySelectorAll('[data-nav]').forEach(el=>el.onclick=()=>{ tab=el.dataset.nav; if(tab==="dashboard") openMetricId=null; render(); });
   document.querySelectorAll('[data-open-metric]').forEach(el=>el.onclick=()=>{ openMetricId = el.dataset.openMetric; tab="metrics"; render(); });
   const backLink = document.querySelector('[data-action="back-to-metrics"]'); if(backLink) backLink.onclick=()=>{ openMetricId=null; render(); };
