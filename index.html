@@ -4,6 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Quality Tracking</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Quality Tracking">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a7d5e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -67,22 +73,42 @@
 <div id="app"></div>
 
 <script>
-const STORE_KEY = "quality-tracking-standalone-v1";
+const STORE_KEY = "quality-tracking-standalone-v3";
 function loadStore(){ try{ const r = localStorage.getItem(STORE_KEY); return r? JSON.parse(r): null; }catch(e){ return null; } }
 function saveStore(d){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }catch(e){ console.error(e); } }
 const uid = () => Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().slice(0,10);
-const CATEGORIES = ["Process","Product","Customer","Food Safety"];
+const CATEGORIES = ["Process","Product","Customer","Food Safety","Manufacturing","Supply Chain","Safety","Engineering"];
 const HIGHER="up", LOWER="down";
 
 function seedData(){
+  const mk = (name, unit, category, target, direction, current, trend, critical) => ({
+    id: uid(), name, unit, category, target, direction, critical: !!critical,
+    points: [
+      {id:uid(), date:"2026-07-17", value: Math.round((current-trend)*100)/100},
+      {id:uid(), date:"2026-07-24", value: current}
+    ]
+  });
   return { metrics: [
-    { id:uid(), name:"NCR Closure Rate", unit:"%", category:"Process", target:90, direction:HIGHER,
-      points:[{id:uid(),date:"2026-06-15",value:78},{id:uid(),date:"2026-06-22",value:82},{id:uid(),date:"2026-06-29",value:85},{id:uid(),date:"2026-07-06",value:91}] },
-    { id:uid(), name:"Customer Complaint Rate", unit:"per 10k units", category:"Customer", target:2, direction:LOWER,
-      points:[{id:uid(),date:"2026-06-15",value:3.4},{id:uid(),date:"2026-06-22",value:3.1},{id:uid(),date:"2026-06-29",value:2.6},{id:uid(),date:"2026-07-06",value:2.2}] },
-    { id:uid(), name:"CCP Deviation Count", unit:"deviations/wk", category:"Food Safety", target:0, direction:LOWER,
-      points:[{id:uid(),date:"2026-06-15",value:2},{id:uid(),date:"2026-06-22",value:1},{id:uid(),date:"2026-06-29",value:0},{id:uid(),date:"2026-07-06",value:1}] }
+    mk("NCR Closure Rate","%","Process",90,HIGHER,91,6.0),
+    mk("CAPA On-Time Closure","%","Process",90,HIGHER,85,-2.0),
+    mk("Internal Audit Findings Closed","count","Process",10,LOWER,12,2),
+    mk("Customer Complaint Rate","per 10k units","Customer",2,LOWER,2.2,-0.4),
+    mk("Customer Returns Rate","%","Customer",0.5,LOWER,0.8,0.1),
+    mk("CCP Deviation Count","deviations/wk","Food Safety",0,LOWER,1,1.0,true),
+    mk("Microbiological Test Failures","count","Food Safety",0,LOWER,0,0,true),
+    mk("Foreign Object Complaints","count","Food Safety",1,LOWER,2,1),
+    mk("First Pass Yield","%","Manufacturing",98,HIGHER,96.5,-0.8),
+    mk("Defect Rate PPM","ppm","Manufacturing",500,LOWER,650,50),
+    mk("Rework Rate","%","Manufacturing",2,LOWER,2.8,0.3),
+    mk("Supplier On-Time Delivery","%","Supply Chain",95,HIGHER,93,-1.0),
+    mk("Incoming Material Rejection","%","Supply Chain",1,LOWER,1.2,0.2),
+    mk("LTIFR - Lost Time Injuries","rate","Safety",0,LOWER,0,0),
+    mk("PPE Compliance","%","Safety",100,HIGHER,98,-1.0),
+    mk("Mean Time To Repair (MTTR)","hrs","Engineering",2,LOWER,2.6,0.3),
+    mk("Breakdown Turnaround Time","hrs","Engineering",1.5,LOWER,1.8,-0.2),
+    mk("Unplanned Downtime","%","Engineering",3,LOWER,4.5,0.5),
+    mk("Maintenance Schedule Compliance","%","Engineering",95,HIGHER,89,-3.0)
   ]};
 }
 
@@ -166,7 +192,7 @@ function renderDashboard(){
         const path = sparklinePath(m.points, 100, 32);
         return `<button class="metric-card" data-open-metric="${m.id}">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">${m.category}</span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">${m.category}${m.critical?' · <span style="color:var(--red);">critical</span>':''}</span>
             <span class="tag tag-${status}">${status==='green'?'on target':'off target'}</span>
           </div>
           <p style="font-size:14px;font-weight:500;margin:0 0 6px;">${esc(m.name)}</p>
@@ -216,7 +242,7 @@ function renderMetrics(){
         return `<button class="row-btn" data-open-metric="${m.id}">
           <div>
             <div style="font-size:14px;">${esc(m.name)}</div>
-            <div style="font-size:11px;color:var(--muted);">${m.category} · target ${m.target} ${esc(m.unit)}</div>
+            <div style="font-size:11px;color:var(--muted);">${m.category}${m.critical?' · <span style="color:var(--red);">critical</span>':''} · target ${m.target} ${esc(m.unit)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span class="mono" style="font-size:13px;">${last?last.value+' '+esc(m.unit):'no data'}</span>
@@ -337,6 +363,12 @@ function attachHandlers(){
 }
 
 render();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
 </script>
 </body>
 </html>
