@@ -73,12 +73,12 @@
 <div id="app"></div>
 
 <script>
-const STORE_KEY = "quality-tracking-standalone-v3";
+const STORE_KEY = "quality-tracking-standalone-v4";
 function loadStore(){ try{ const r = localStorage.getItem(STORE_KEY); return r? JSON.parse(r): null; }catch(e){ return null; } }
 function saveStore(d){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }catch(e){ console.error(e); } }
 const uid = () => Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().slice(0,10);
-const CATEGORIES = ["Process","Product","Customer","Food Safety","Manufacturing","Supply Chain","Safety","Engineering"];
+const CATEGORIES = ["Process","Product","Customer","Food Safety","Manufacturing","Supply Chain","Safety","Engineering","Recall & Traceability"];
 const HIGHER="up", LOWER="down";
 
 function seedData(){
@@ -108,7 +108,11 @@ function seedData(){
     mk("Mean Time To Repair (MTTR)","hrs","Engineering",2,LOWER,2.6,0.3),
     mk("Breakdown Turnaround Time","hrs","Engineering",1.5,LOWER,1.8,-0.2),
     mk("Unplanned Downtime","%","Engineering",3,LOWER,4.5,0.5),
-    mk("Maintenance Schedule Compliance","%","Engineering",95,HIGHER,89,-3.0)
+    mk("Maintenance Schedule Compliance","%","Engineering",95,HIGHER,89,-3.0),
+    mk("Recall / Withdrawal Rate","count/yr","Recall & Traceability",0,LOWER,0,0,true),
+    mk("Recall Response Time","hrs","Recall & Traceability",4,LOWER,5.5,0.5,true),
+    mk("Mock Recall Effectiveness","%","Recall & Traceability",95,HIGHER,92,-1.0,true),
+    mk("Traceability Exercise Frequency","count/yr","Recall & Traceability",4,HIGHER,3,-1)
   ]};
 }
 
